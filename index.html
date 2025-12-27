@@ -7,44 +7,14 @@
  <link rel="manifest" href="manifest.json">
 
   <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-
 <script>
   window.OneSignalDeferred = window.OneSignalDeferred || [];
-
-  OneSignalDeferred.push(async function (OneSignal) {
+  OneSignalDeferred.push(async function(OneSignal) {
     await OneSignal.init({
       appId: "9ebf678b-18bf-48ca-98f1-de5ae038c287",
-      notifyButton: { enable: false }
-    });
-
-    // Ask permission explicitly
-    const permission = await OneSignal.Notifications.requestPermission();
-    if (!permission) return;
-
-    // Get Player ID
-    const playerId = OneSignal.User.PushSubscription.id;
-    if (!playerId) return;
-
-    // Generate or reuse unique admin ID
-    let adminId = localStorage.getItem("admin_id");
-    if (!adminId) {
-      adminId = "admin_" + crypto.randomUUID();
-      localStorage.setItem("admin_id", adminId);
-    }
-
-    // Send to Google Sheet
-    fetch("https://script.google.com/macros/s/AKfycbzmhD2jZtKOqGDeL2nq67j6rMp3gWqWg4MZYjWC_3xDolpL8N1Itw-3BKgZ9QWmXBIuow/exec", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        restaurantId: "R001",
-        adminName: adminId,
-        playerId: playerId
-      })
     });
   });
 </script>
-
 
 <style>
     * { box-sizing: border-box; font-family: Inter, system-ui; }
