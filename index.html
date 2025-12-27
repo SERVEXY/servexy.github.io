@@ -213,6 +213,60 @@ h1 {
   }
 </script>
 
+ <script>
+async function waitForPlayerId() {
+  if (!window.OneSignal) return;
+
+  const check = async () => {
+    const id = OneSignal?.User?.PushSubscription?.id;
+    if (!id) return false;
+    return id;
+  };
+
+  // Retry loop (because ID is async)
+  for (let i = 0; i < 20; i++) {
+    const playerId = await check();
+    if (playerId) {
+      handlePlayerId(playerId);
+      break;
+    }
+    await new Promise(r => setTimeout(r, 500));
+  }
+}
+
+function getOrCreateAdminId() {
+  let adminId = localStorage.getItem("admin_id");
+  if (!adminId) {
+    adminId = "admin_" + crypto.randomUUID();
+    localStorage.setItem("admin_id", adminId);
+  }
+  return adminId;
+}
+
+function handlePlayerId(playerId) {
+  // Avoid duplicate pushes
+  if (localStorage.getItem("player_saved") === playerId) return;
+
+  const adminId = getOrCreateAdminId();
+
+  fetch("https://script.google.com/macros/s/AKfycbzmhD2jZtKOqGDeL2nq67j6rMp3gWqWg4MZYjWC_3xDolpL8N1Itw-3BKgZ9QWmXBIuow/exec", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      restaurantId: "R001",
+      adminName: adminId,
+      playerId: playerId
+    })
+  });
+
+  localStorage.setItem("player_saved", playerId);
+}
+
+// Start after page load
+window.addEventListener("load", waitForPlayerId);
+</script>
+
+ 
 
 <script>
 
@@ -321,3 +375,4 @@ loadMenu()
 
 </body>
 </html>
+
