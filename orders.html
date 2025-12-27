@@ -21,36 +21,12 @@ body { margin:0; background:#f7f9fc; color:#111 }
   padding:10px 18px; border-radius:12px;
   background:#f1f4ff; cursor:pointer;
 }
-a{
-  text-decoration: none;
-}
+a { text-decoration:none; color:inherit }
 .nav-btn:hover { background:#4f6cff; color:white }
 
 /* PAGE */
 .container { padding:20px; max-width:1200px; margin:auto }
 h1 { margin-bottom:12px }
-
-/* FILTER */
-.filter {
-  display:flex; gap:12px; flex-wrap:wrap;
-  background:white; padding:16px;
-  border-radius:18px;
-  box-shadow:0 8px 30px rgba(0,0,0,.05);
-}
-.filter input {
-  padding:8px 12px;
-  border-radius:10px;
-  border:1px solid #ddd;
-}
-.filter button {
-  padding:10px 16px;
-  border:none;
-  border-radius:12px;
-  background:#4f6cff;
-  color:white;
-  cursor:pointer;
-}
-.filter button:hover { opacity:.9 }
 
 /* STATS */
 .stats {
@@ -69,9 +45,36 @@ h1 { margin-bottom:12px }
 /* GRAPH */
 .graphs {
   background:white;
-  padding:20px;
+  padding:16px;
   border-radius:18px;
   box-shadow:0 12px 40px rgba(0,0,0,.06);
+}
+.graphs canvas {
+  width:100% !important;
+  height:260px !important;
+}
+
+/* FILTER CARDS */
+.control-card {
+  background:white;
+  padding:14px;
+  border-radius:18px;
+  box-shadow:0 8px 30px rgba(0,0,0,.05);
+  margin-top:16px;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.control-card button {
+  padding:10px 14px;
+  border:none;
+  border-radius:12px;
+  background:#f1f4ff;
+  cursor:pointer;
+}
+.control-card button.active {
+  background:#4f6cff;
+  color:white;
 }
 
 /* ORDERS */
@@ -116,9 +119,9 @@ h1 { margin-bottom:12px }
 <body>
 
 <nav class="nav">
-  <div class="nav-btn"> <a href="/"> Home </a></div>
-  <div class="nav-btn"> <a href="/"> Menu </a></div>
-  <div class="nav-btn"> <a href="/faqs.html">FAQs</a></div>
+  <div class="nav-btn"><a href="/">Home</a></div>
+  <div class="nav-btn"><a href="/">Menu</a></div>
+  <div class="nav-btn"><a href="/faqs.html">FAQs</a></div>
 </nav>
 
 <div id="loader" class="loader hidden">
@@ -128,78 +131,95 @@ h1 { margin-bottom:12px }
 <section class="container">
 <h1>📦 Orders</h1>
 
-<div class="filter">
-  <input type="date" id="fromDate">
-  <input type="date" id="toDate">
-  <button onclick="applyDateFilter()">Apply</button>
-  <button onclick="toggleCancelled()">Show / Hide Cancelled</button>
-</div>
-
+<!-- STATS -->
 <div class="stats">
   <div class="stat-card">
     <h3>Total Orders</h3>
     <p id="totalCount">0</p>
   </div>
   <div class="stat-card">
-    <h3>Delivered</h3>
+    <h3>Delivered Orders</h3>
     <p id="deliveredCount">0</p>
   </div>
   <div class="stat-card">
-    <h3>Cancelled</h3>
+    <h3>Cancelled Orders</h3>
     <p id="cancelledCount">0</p>
   </div>
 </div>
 
+<!-- CHART -->
 <div class="graphs">
   <canvas id="orderChart"></canvas>
 </div>
 
+<!-- DATE FILTER (CHART ONLY) -->
+<div class="control-card">
+  <input type="date" id="fromDate">
+  <input type="date" id="toDate">
+  <button onclick="render()">Apply Date</button>
+</div>
+
+<!-- STATUS FILTER -->
+<div class="control-card" id="statusButtons">
+  <button class="active" onclick="setStatus('All', this)">All Orders</button>
+  <button onclick="setStatus('Confirmed', this)">Confirmed</button>
+  <button onclick="setStatus('Delivered', this)">Delivered</button>
+  <button onclick="setStatus('Cancelled', this)">Cancelled</button>
+</div>
+
+<!-- ORDERS -->
 <div id="orders" class="grid"></div>
 </section>
 
 <script>
-const BASE = "https://script.google.com/macros/s/AKfycbyfSn1mVLfdw22TA2jwmIVK01uidH7vjJKwYGcxm_yHDJA_0XA2bTf36UtSUdhhWsmLpA/exec"
-const GET_API = BASE + "?type=orders"
-const POST_API = BASE
+const BASE="https://script.google.com/macros/s/AKfycbyfSn1mVLfdw22TA2jwmIVK01uidH7vjJKwYGcxm_yHDJA_0XA2bTf36UtSUdhhWsmLpA/exec"
+const GET_API=BASE+"?type=orders"
+const POST_API=BASE
 
-const loader = document.getElementById("loader")
-const ordersDiv = document.getElementById("orders")
-let orders = []
-let showCancelled = false
+const loader=document.getElementById("loader")
+const ordersDiv=document.getElementById("orders")
+let orders=[]
 let chart
+let currentStatus="All"
 
-const show = ()=>loader.classList.remove("hidden")
-const hide = ()=>loader.classList.add("hidden")
+const show=()=>loader.classList.remove("hidden")
+const hide=()=>loader.classList.add("hidden")
 
 async function loadOrders(){
   show()
-  const res = await fetch(GET_API)
-  orders = await res.json()
+  const res=await fetch(GET_API)
+  orders=await res.json()
   render()
   hide()
 }
 
-function toggleCancelled(){
-  showCancelled = !showCancelled
+function setStatus(status, btn){
+  currentStatus=status
+  document.querySelectorAll("#statusButtons button").forEach(b=>b.classList.remove("active"))
+  btn.classList.add("active")
   render()
 }
 
-function applyDateFilter(){ render() }
+function getFilteredOrders(chartOnly=false){
+  const from=fromDate.value
+  const to=toDate.value
 
-function render(){
-  const from = fromDate.value
-  const to = toDate.value
+  return orders.filter(o=>{
+    const od = new Date(o["Order Date"]).toISOString().slice(0,10)
 
-  const list = orders.filter(o=>{
-    if(!showCancelled && o.Status==="Cancelled") return false
-    if(from && o["Order Date"] < from) return false
-    if(to && o["Order Date"] > to) return false
+    if(!chartOnly && currentStatus!=="All" && o.Status!==currentStatus) return false
+    if(from && od < from) return false
+    if(to && od > to) return false
     return true
   })
+}
 
-  totalCount.innerText = list.length
-  deliveredCount.innerText = list.filter(o=>o.Status==="Delivered").length
-  cancelledCount.innerText = orders.filter(o=>o.Status==="Cancelled").length
+function render(){
+  const list=getFilteredOrders()
+
+  totalCount.innerText=orders.length
+  deliveredCount.innerText=orders.filter(o=>o.Status==="Delivered").length
+  cancelledCount.innerText=orders.filter(o=>o.Status==="Cancelled").length
 
   ordersDiv.innerHTML=""
   list.forEach(o=>{
@@ -216,7 +236,7 @@ function render(){
     </div>`
   })
 
-  drawChart(list)
+  drawChart(getFilteredOrders(true))
 }
 
 function drawChart(data){
@@ -224,23 +244,41 @@ function drawChart(data){
 
   const map={}
   data.forEach(o=>{
-    const d=o["Order Date"]
+    const d = new Date(o["Order Date"]).toISOString().slice(0,10)
     map[d]=map[d]||{t:0,d:0,c:0}
     map[d].t++
     if(o.Status==="Delivered") map[d].d++
     if(o.Status==="Cancelled") map[d].c++
   })
 
-  const labels=Object.keys(map)
+  const labels=Object.keys(map).sort()
+
   chart=new Chart(orderChart,{
     type:"line",
     data:{
       labels,
       datasets:[
-        {label:"Total",data:labels.map(l=>map[l].t),borderColor:"#4f6cff",tension:.4},
-        {label:"Delivered",data:labels.map(l=>map[l].d),borderColor:"#2dd4bf",tension:.4},
-        {label:"Cancelled",data:labels.map(l=>map[l].c),borderColor:"#f87171",tension:.4}
+        { label:"Total", data:labels.map(l=>map[l].t), borderColor:"#4f6cff", tension:.4 },
+        { label:"Delivered", data:labels.map(l=>map[l].d), borderColor:"#2dd4bf", tension:.4 },
+        { label:"Cancelled", data:labels.map(l=>map[l].c), borderColor:"#f87171", tension:.4 }
       ]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{ legend:{ position:"bottom" } },
+      scales:{
+        x:{
+          ticks:{
+            autoSkip:true,
+            maxTicksLimit: window.innerWidth < 480 ? 4 : 8,
+            callback:(v,i)=>{
+              const d=new Date(labels[i])
+              return d.toLocaleDateString("en-GB",{day:"2-digit",month:"short"})
+            }
+          }
+        }
+      }
     }
   })
 }
