@@ -213,43 +213,6 @@ h1 {
     });
   }
 </script>
-
-
-
-<script>
-function getOrCreateAdminId() {
-  let adminId = localStorage.getItem("admin_id");
-
-  if (!adminId) {
-    adminId = "admin_" + crypto.randomUUID();
-    localStorage.setItem("admin_id", adminId);
-  }
-
-  return adminId;
-}
-
-window.OneSignal = window.OneSignal || [];
-
-OneSignal.push(async function () {
-  const playerId = OneSignal.User.PushSubscription.id;
-  if (!playerId) return;
-
-  const adminId = getOrCreateAdminId();
-
-  fetch("https://script.google.com/macros/s/AKfycbzmhD2jZtKOqGDeL2nq67j6rMp3gWqWg4MZYjWC_3xDolpL8N1Itw-3BKgZ9QWmXBIuow/exec", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      restaurantId: "R001",
-      adminName: adminId,
-      playerId: playerId
-    })
-  });
-});
-</script>
-
-
-
 <script>
 
 const loader = document.getElementById("loader")
@@ -357,5 +320,6 @@ loadMenu()
 
 </body>
 </html>
+
 
 
