@@ -4,7 +4,19 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Menu Manager</title>
+ 
  <link rel="manifest" href="manifest.json">
+ 
+ <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script>
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  OneSignalDeferred.push(async function(OneSignal) {
+    await OneSignal.init({
+      appId: "9ebf678b-18bf-48ca-98f1-de5ae038c287",
+    });
+  });
+</script>
+ 
 <style>
     * { box-sizing: border-box; font-family: Inter, system-ui; }
 
@@ -345,3 +357,4 @@ loadMenu()
 
 </body>
 </html>
+
