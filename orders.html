@@ -94,7 +94,6 @@ h1 { margin-bottom:12px }
   border-radius:10px; cursor:pointer;
 }
 .deliver { background:#e6fffa }
-.cancel { background:#ffe8e8 }
 
 /* LOADER */
 .loader {
@@ -152,7 +151,7 @@ h1 { margin-bottom:12px }
   <canvas id="orderChart"></canvas>
 </div>
 
-<!-- DATE FILTER (CHART ONLY) -->
+<!-- DATE FILTER -->
 <div class="control-card">
   <input type="date" id="fromDate">
   <input type="date" id="toDate">
@@ -205,8 +204,7 @@ function getFilteredOrders(chartOnly=false){
   const to=toDate.value
 
   return orders.filter(o=>{
-    const od = new Date(o["Order Date"]).toISOString().slice(0,10)
-
+    const od=new Date(o["Order Date"]).toISOString().slice(0,10)
     if(!chartOnly && currentStatus!=="All" && o.Status!==currentStatus) return false
     if(from && od < from) return false
     if(to && od > to) return false
@@ -215,25 +213,37 @@ function getFilteredOrders(chartOnly=false){
 }
 
 function render(){
-  const list=getFilteredOrders()
+  const list = getFilteredOrders().sort(
+    (a,b)=>new Date(b["Order Date"])-new Date(a["Order Date"])
+  )
 
   totalCount.innerText=orders.length
   deliveredCount.innerText=orders.filter(o=>o.Status==="Delivered").length
   cancelledCount.innerText=orders.filter(o=>o.Status==="Cancelled").length
 
   ordersDiv.innerHTML=""
+
   list.forEach(o=>{
+    let actions=""
+
+    if(o.Status==="Confirmed"){
+      actions=`
+        <div class="actions">
+          <button class="deliver" onclick="updateOrder(${o.id},'Delivered')">
+            Deliver
+          </button>
+        </div>`
+    }
+
     ordersDiv.innerHTML+=`
-    <div class="card">
-      <strong>${o["Customer Name"]}</strong>
-      <p>${o["Food Item"]} × ${o["Quantity Ordered"]}</p>
-      <p>${o.Address}</p>
-      <p>Status: ${o.Status}</p>
-      <div class="actions">
-        <button class="deliver" onclick="updateOrder(${o.id},'Delivered')">Deliver</button>
-        <button class="cancel" onclick="updateOrder(${o.id},'Cancelled')">Cancel</button>
-      </div>
-    </div>`
+      <div class="card">
+        <strong>${o["Customer Name"]}</strong>
+        <p>${o["Food Item"]} × ${o["Quantity Ordered"]}</p>
+        <p>${o.Address}</p>
+        <p>${formatWhatsAppNumber(o.Number)}</p>
+        <p>Status: ${o.Status}</p>
+        ${actions}
+      </div>`
   })
 
   drawChart(getFilteredOrders(true))
@@ -244,7 +254,7 @@ function drawChart(data){
 
   const map={}
   data.forEach(o=>{
-    const d = new Date(o["Order Date"]).toISOString().slice(0,10)
+    const d=new Date(o["Order Date"]).toISOString().slice(0,10)
     map[d]=map[d]||{t:0,d:0,c:0}
     map[d].t++
     if(o.Status==="Delivered") map[d].d++
@@ -266,19 +276,7 @@ function drawChart(data){
     options:{
       responsive:true,
       maintainAspectRatio:false,
-      plugins:{ legend:{ position:"bottom" } },
-      scales:{
-        x:{
-          ticks:{
-            autoSkip:true,
-            maxTicksLimit: window.innerWidth < 480 ? 4 : 8,
-            callback:(v,i)=>{
-              const d=new Date(labels[i])
-              return d.toLocaleDateString("en-GB",{day:"2-digit",month:"short"})
-            }
-          }
-        }
-      }
+      plugins:{ legend:{ position:"bottom" } }
     }
   })
 }
@@ -291,6 +289,11 @@ async function updateOrder(id,status){
   fd.append("status",status)
   await fetch(POST_API,{method:"POST",body:fd})
   await loadOrders()
+}
+
+function formatWhatsAppNumber(num){
+  if(!num) return ""
+  return "+" + num.replace(/@.*$/, "")
 }
 
 loadOrders()
